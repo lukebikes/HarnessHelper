@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QGridLayout, QMessageBox
+    QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QGridLayout, QMessageBox, QComboBox 
 )
 import sys
 import math
@@ -24,8 +24,19 @@ class HarnessCalculator(QWidget):
             "18 Gauge": 1.8140,
             "16 Gauge": 2.3500,
             "14 Gauge": 3.664,
+            "12 Gauge": 4.7,     #added after
             "27500 Shielded 2 Wire 22ga": 10.080,
             "27500 Shielded 3 Wire 22ga": 11.241
+        }
+
+        self.wire_Alimit = {
+            "24 Gauge": 2,
+            "22 Gauge": 3,
+            "20 Gauge": 5,
+            "18 Gauge": 7,
+            "16 Gauge": 10,
+            "14 Gauge": 20,
+            "12 Gauge": 30,    
         }
 
         # Create labels and input fields dynamically
@@ -54,6 +65,33 @@ class HarnessCalculator(QWidget):
         layout.addWidget(self.calc_button)
         layout.addWidget(self.result_label)
         layout.addWidget(self.result_field)
+
+         # Dropdown menu
+        self.operation_dropdown = QComboBox()
+        self.operation_dropdown.addItems(["24 Gauge", "22 Gauge", "20 Gauge", "18 Gauge", "16 Gauge", "14 Gauge", "12 Gauge"])
+        layout.addWidget(self.operation_dropdown)
+
+        # Input boxes
+        self.input1 = QLineEdit()
+        self.input1.setPlaceholderText("Enter first number")
+        layout.addWidget(self.input1)
+
+        self.input2 = QLineEdit()
+        self.input2.setPlaceholderText("Enter second number")
+        layout.addWidget(self.input2)
+
+        # Calculate2 button
+        self.calculate_button = QPushButton("Calculate Current Limit")
+        self.calculate_button.clicked.connect(self.calculate_Amp)
+        layout.addWidget(self.calculate_button)
+
+        # Result display
+        self.result_label2 = QLabel("Result: ")
+        layout.addWidget(self.result_label2)
+
+        self.setLayout(layout)
+        self.setWindowTitle("Simple Calculator")
+        self.setGeometry(100, 100, 300, 200)
         
         self.setLayout(layout)
 
@@ -78,6 +116,24 @@ class HarnessCalculator(QWidget):
             self.result_field.setText(f"{diameter:.2f} mm")
         else:
             self.result_field.setText("0.00 mm")
+
+    ##Second Part
+    
+   
+
+    def calculate_Amp(self):
+        try:
+            NumWire = float(self.input1.text())
+            NumLoad = float(self.input2.text())
+            WireSize = self.operation_dropdown.currentText()
+
+            result = NumWire*NumLoad*self.wire_Alimit[WireSize]
+                  
+
+            self.result_label2.setText(f"Result: {result} A")
+
+        except ValueError:
+            self.result_label2.setText("Error: Invalid Input")
 
 
 if __name__ == "__main__":
