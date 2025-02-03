@@ -2,8 +2,11 @@ from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton, QLineEdit, QVBoxLayout, QGridLayout, QMessageBox, QComboBox, QFrame
 )
 from PyQt6 import QtGui
+from PyQt6.QtGui import (QIntValidator, QDoubleValidator, QRegularExpressionValidator)
+from PyQt6.QtCore import QRegularExpression
 import sys
 import math
+import re
 
 class HarnessCalculator(QWidget):
     def __init__(self):
@@ -51,7 +54,7 @@ class HarnessCalculator(QWidget):
         for wire, _ in self.wire_sizes.items():
             label = QLabel(wire)
             input_field = QLineEdit()
-            input_field.setValidator(QtGui.QIntValidator(0, 9999))  # Only allow positive integers
+            input_field.setValidator(QIntValidator(0, 9999))  # Only allow positive integers
             self.inputs[wire] = input_field  # Store input field reference
             grid.addWidget(label, row, 0)
             grid.addWidget(input_field, row, 1)
@@ -84,38 +87,59 @@ class HarnessCalculator(QWidget):
         layout.addWidget(separator)
 
          # Dropdown menu
+        row2=0
         grid2 = QGridLayout() #grid layout for second part
         self.operation_dropdown = QComboBox()
         grid2.addWidget(QLabel("Wire Gauge"), 0, 0)
         self.operation_dropdown.addItems(["24 Gauge", "22 Gauge", "20 Gauge", "18 Gauge", "16 Gauge", "14 Gauge", "12 Gauge"])
-        grid2.addWidget(self.operation_dropdown, 0 , 1)
+        grid2.addWidget(self.operation_dropdown, row2 , 1)
 
 
         # Dropdown menu2
-        
+        row2 += 1
         self.operation_dropdown2 = QComboBox()
         grid2.addWidget(QLabel("Bundle loading percentage"), 1, 0)
         self.operation_dropdown2.addItems(["20", "40", "60", "80", "100"])
-        grid2.addWidget(self.operation_dropdown2, 1, 1)
+        grid2.addWidget(self.operation_dropdown2, row2, 1)
     
-        # Input boxes
-       
+        # Input wire number boxes
+        row2 += 1
         self.input1 = QLineEdit()
-        self.input1.setValidator(QtGui.QIntValidator(0, 9999))
-        grid2.addWidget(QLabel("Number of Wires in Bundle"), 2, 0)
-        grid2.addWidget(self.input1, 2, 1)
+        self.input1.setValidator(QIntValidator(0, 9999))
+        grid2.addWidget(QLabel("Number of Wires in Bundle"), row2 , 0)
+        grid2.addWidget(self.input1, row2 , 1)
+
+         # Input wire Safety Factor
+        row2 += 1
+
+        self.inputSF = QLineEdit()
+        self.inputSF.setPlaceholderText("1")
+        #validator = QDoubleValidator(0.1, 99.9, 1, self)  # Range: 0 to 99.9, 1 decimal place
+        #validator.setNotation(QDoubleValidator.Notation.StandardNotation)  # Standard notation
+        #validator.setDecimals(1)
+        
+        regex = QRegularExpression("^(?:[0-9][0-9]{0,1}(\.\d{1,2})?|99(\.99)?)$")
+        validator = QRegularExpressionValidator(regex)
+        self.inputSF.setValidator(validator)
+        #self.inputSF.editingFinished.connect(self.format_decimal)
+
+        grid2.addWidget(QLabel("Safety Factor"), row2 , 0)
+        grid2.addWidget(self.inputSF, row2, 1)
+        
         
        
 
         
         # Calculate2 button
+        row2 += 1
         self.calculate_button = QPushButton("Calculate Current Limit")
         self.calculate_button.clicked.connect(self.calculate_Amp)
-        grid2.addWidget(self.calculate_button, 3, 0, 1, 2)
+        grid2.addWidget(self.calculate_button, row2 , 0, 1, 2)
 
         # Result display
+        row2 += 1
         self.result_label2 = QLabel("Current Limit: ")
-        grid2.addWidget(self.result_label2, 4, 0, 1, 2)
+        grid2.addWidget(self.result_label2, row2 , 0, 1, 2)
         layout.addLayout(grid2)
 
         
@@ -123,6 +147,24 @@ class HarnessCalculator(QWidget):
         self.setGeometry(100, 100, 300, 250)
         
         self.setLayout(layout)
+
+    # def format_decimal(self):
+    #     """Ensures the input always displays one decimal place correctly."""
+    #     text = self.inputSF.text().strip()
+
+    #     if text:  # If the field is not empty
+    #         try:
+    #             # Preserve leading zero for numbers like 0.2
+    #             if "." in text:
+    #                 num = float(text)
+    #                 formatted_text = "{:.1f}".format(num)  # Format to one decimal place
+    #             else:
+    #                 num = int(text)
+    #                 formatted_text = f"{num}.0"  # Ensure decimal formatting
+
+    #             self.inputSF.setText(formatted_text)  # Update text field
+    #         except ValueError:
+    #             pass  # Ignore invalid input
 
     def calculate_diameter(self):
         total_area = 0
@@ -152,9 +194,13 @@ class HarnessCalculator(QWidget):
 
     def calculate_Amp(self):
         try:
+            
             WireSize = self.operation_dropdown.currentText()
             NumWire = float(self.input1.text())
             PercLoad = self.operation_dropdown2.currentText()
+            SafetyFactor = float(self.inputSF.text()) if self.inputSF.text() else 1
+
+            
             
 
             if PercLoad == "20" :
@@ -169,7 +215,7 @@ class HarnessCalculator(QWidget):
                 CoeffLoad = 0.2701568 + 0.8338723*math.exp(-0.1363069*NumWire)
             
             
-            result = CoeffLoad*self.wire_Alimit[WireSize]
+            result = CoeffLoad*float(self.wire_Alimit[WireSize])/float(SafetyFactor)
                   
 
             self.result_label2.setText(f"Current Limit: {result:.2f} A")
