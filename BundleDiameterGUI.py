@@ -6,7 +6,10 @@ from PyQt6.QtGui import (QIntValidator, QDoubleValidator, QRegularExpressionVali
 from PyQt6.QtCore import QRegularExpression
 import sys
 import math
-import re
+import packcircles as pc
+import matplotlib.pyplot as plt
+import matplotlib
+#import re
 
 class HarnessCalculator(QWidget):
     def __init__(self):
@@ -27,7 +30,7 @@ class HarnessCalculator(QWidget):
         grid = QGridLayout()
         
         self.inputs = {}  # Dictionary to store input fields
-        self.wire_sizes = {
+        self.wire_sizes = {     #wires Area in mm^2
             "24 Gauge": 0.6939,
             "22 Gauge": 0.9331,
             "20 Gauge": 1.2668,
@@ -38,6 +41,19 @@ class HarnessCalculator(QWidget):
             "27500 Shielded 2 Wire 22ga": 10.080,
             "27500 Shielded 3 Wire 22ga": 11.241
         }
+
+        self.wire_radius = {
+            "27500 Shielded 3 Wire 22ga": 3.783/2,
+            "27500 Shielded 2 Wire 22ga": 3.582/2,
+            "12 Gauge": 2.446/2,
+            "14 Gauge": 2.160/2,
+            "16 Gauge": 1.730/2,
+            "18 Gauge": 1.520/2,
+            "20 Gauge": 1.270/2,
+            "22 Gauge": 1.090/2,
+            "24 Gauge": 0.940/2,
+        }
+    
 
         self.wire_Alimit = {
             "24 Gauge": 2,
@@ -65,6 +81,12 @@ class HarnessCalculator(QWidget):
         self.calc_button = QPushButton("Calculate Harness Diameter")
         self.calc_button.clicked.connect(self.calculate_diameter)
         grid.addWidget(self.calc_button, row, 0 , 1, 3)
+        row += 1
+        self.calc_button = QPushButton("Display Bundle Section")
+        self.calc_button.clicked.connect(self.DisplayBundleSection)
+        grid.addWidget(self.calc_button, row, 0 , 1, 3)
+
+        row += 1
 
         # Output Field
         self.result_label = QLabel("Harness Diameter:")
@@ -183,13 +205,52 @@ class HarnessCalculator(QWidget):
 
         # Final diameter calculation
         if total_area > 0:
-            diameter = 1.25 * math.sqrt(total_area)
+            diameter = 1.3 * math.sqrt(total_area)
             self.result_label.setText(f"Harness Diameter: {diameter:.2f} mm")
         else:
             self.result_label.setText("Harness Diameter: 0.00 mm")
 
-    ##Second Part
-    
+    def DisplayBundleSection(self):
+        radii=[]
+        totnum_wires = 0
+        for wire, radio in self.wire_radius.items():
+            value = self.inputs[wire].text().strip()
+            if value:
+                try:
+                    num_wires = int(value)
+                    if num_wires < 0:
+                        raise ValueError
+                    totnum_wires += num_wires
+                    for times in range(num_wires):
+                        radii.append(radio)
+                except ValueError:
+                    QMessageBox.warning(self, "Input Error", f"Invalid input for {wire}. Please enter a valid number.")
+                    return
+        if totnum_wires < 3:
+            QMessageBox.warning(self, "Input Error", f"Please enter at least 3 wires")
+            return
+        else: 
+            print(radii)
+            fig = plt.figure()
+            ax = plt.subplot()
+            cmap = matplotlib.colormaps['coolwarm_r']
+            circles = pc.pack(radii)
+            for (x,y,rado) in circles:
+                patch = plt.Circle(
+                    (x,y),
+                    rado,
+                    color=cmap(rado/max(radii)),
+                    alpha=1
+                )
+                ax.add_patch(patch)
+            fig.set_figheight(7)
+            fig.set_figwidth(7)
+            ax.set(xlim=(-15, 15), ylim=(-15, 15))
+            plt.gca().set_aspect('equal')
+            plt.axis('off')
+            plt.show()
+        
+
    
 
     def calculate_Amp(self):
