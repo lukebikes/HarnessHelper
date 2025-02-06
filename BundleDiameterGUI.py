@@ -65,6 +65,12 @@ class HarnessCalculator(QWidget):
             "12 Gauge": 30,    
         }
 
+        self.material_resistance = {
+            "Cu": 0.00000172,
+            "Ag": 0.00000159,
+            "CuS": 0.00000159,
+        }
+
         # Create labels and input fields dynamically
         row = 0
         for wire, _ in self.wire_sizes.items():
@@ -79,7 +85,7 @@ class HarnessCalculator(QWidget):
 
         # Calculate Harness Button
         self.calc_button = QPushButton("Calculate Harness Diameter")
-        self.calc_button.clicked.connect(self.calculate_diameter)
+        self.calc_button.clicked.connect(self.Calculate_diameter)
         grid.addWidget(self.calc_button, row, 0 , 1, 3)
         row += 1
         self.calc_button = QPushButton("Display Bundle Section")
@@ -91,16 +97,12 @@ class HarnessCalculator(QWidget):
         # Output Field
         self.result_label = QLabel("Harness Diameter:")
         grid.addWidget(self.result_label, row+1, 0, 1, 3)
-         #layout.addWidget(self.result_label)
-       # self.result_field = QLineEdit()
-        #self.result_field.setReadOnly(True)
+       
 
         # Layout Setup
         layout = QVBoxLayout()
         layout.addLayout(grid)
-       # layout.addWidget(self.calc_button)
-       # layout.addWidget(self.result_label)
-          # layout.addWidget(self.result_field)
+      
 
          # Separator
         separator = QFrame()
@@ -108,7 +110,7 @@ class HarnessCalculator(QWidget):
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(separator)
 
-         # Dropdown menu
+         # Dropdown menu1
         row2=0
         grid2 = QGridLayout() #grid layout for second part
         self.operation_dropdown = QComboBox()
@@ -136,26 +138,22 @@ class HarnessCalculator(QWidget):
 
         self.inputSF = QLineEdit()
         self.inputSF.setPlaceholderText("1")
-        #validator = QDoubleValidator(0.1, 99.9, 1, self)  # Range: 0 to 99.9, 1 decimal place
-        #validator.setNotation(QDoubleValidator.Notation.StandardNotation)  # Standard notation
-        #validator.setDecimals(1)
+        
         
         regex = QRegularExpression("^(?:[0-9][0-9]{0,1}(\.\d{1,2})?|99(\.99)?)$")
         validator = QRegularExpressionValidator(regex)
         self.inputSF.setValidator(validator)
-        #self.inputSF.editingFinished.connect(self.format_decimal)
 
         grid2.addWidget(QLabel("Safety Factor"), row2 , 0)
         grid2.addWidget(self.inputSF, row2, 1)
         
         
        
-
         
         # Calculate2 button
         row2 += 1
         self.calculate_button = QPushButton("Calculate Current Limit")
-        self.calculate_button.clicked.connect(self.calculate_Amp)
+        self.calculate_button.clicked.connect(self.Calculate_Amp)
         grid2.addWidget(self.calculate_button, row2 , 0, 1, 2)
 
         # Result display
@@ -164,9 +162,72 @@ class HarnessCalculator(QWidget):
         grid2.addWidget(self.result_label2, row2 , 0, 1, 2)
         layout.addLayout(grid2)
 
-        
+
+         # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(separator)
+
+        # Dropdown menu3
+        row3=0
+        grid3 = QGridLayout() #grid layout for second part
+        self.operation_dropdown3 = QComboBox()
+        grid3.addWidget(QLabel("Wire Gauge"), 0, 0)
+        self.operation_dropdown3.addItems(["24 Gauge", "22 Gauge", "20 Gauge", "18 Gauge", "16 Gauge", "14 Gauge", "12 Gauge"])
+        grid3.addWidget(self.operation_dropdown3, row3 , 1)
+
+        # Input boxes3
+        row3 += 1
+        label = QLabel("Current (A):")
+        self.input_curr = QLineEdit()
+        self.input_curr.setValidator(QIntValidator(0, 999))  # Only allow positive integers
+        grid3.addWidget(label, row3, 0)
+        grid3.addWidget(self.input_curr, row3, 1)
+
+        # Input boxes3
+        # row3 += 1
+        # label = QLabel("Voltage (V):")
+        # self.input_volt = QLineEdit()
+        # self.input_volt.setValidator(QIntValidator(0, 999))  # Only allow positive integers
+        # grid3.addWidget(label, row3, 0)
+        # grid3.addWidget(self.input_volt, row3, 1)
+
+         # Input boxes3
+        row3 += 1
+        label = QLabel("Lenght (m):")
+        self.input_lenght = QLineEdit()
+        self.input_lenght.setValidator(QIntValidator(0, 999))  # Only allow positive integers
+        grid3.addWidget(label, row3, 0)
+        grid3.addWidget(self.input_lenght, row3, 1)
+       
+        # Dropdown menu3
+        row3 += 1
+        self.operation_dropdown4 = QComboBox()
+        grid3.addWidget(QLabel("Conductor Material"), row3, 0)
+        self.operation_dropdown4.addItems(["Cu", "Ag", "CuS"])
+        grid3.addWidget(self.operation_dropdown4, row3 , 1)
+
+
+        # Calculate button3
+        row3 += 1
+        self.calculate_button3 = QPushButton("Calculate Voltage Drop")
+        self.calculate_button3.clicked.connect(self.Calculate_drop)
+        grid3.addWidget(self.calculate_button3, row3 , 0, 1, 2)
+
+        # Result display3
+        row3 += 1
+        self.result_label3 = QLabel("Voltage Drop: ")
+        grid3.addWidget(self.result_label3, row3 , 0, 1, 2)
+        layout.addLayout(grid3)
+
+
+
+        layout.addLayout(grid3)
+
+        # Set layout
         self.setWindowTitle("HarnessHelper")
-        self.setGeometry(100, 100, 300, 250)
+        self.setGeometry(1000, 100, 300, 300)
         
         self.setLayout(layout)
 
@@ -188,7 +249,7 @@ class HarnessCalculator(QWidget):
     #         except ValueError:
     #             pass  # Ignore invalid input
 
-    def calculate_diameter(self):
+    def Calculate_diameter(self):
         total_area = 0
 
         for wire, area in self.wire_sizes.items():
@@ -253,7 +314,7 @@ class HarnessCalculator(QWidget):
 
    
 
-    def calculate_Amp(self):
+    def Calculate_Amp(self):
         try:
             
             WireSize = self.operation_dropdown.currentText()
@@ -261,8 +322,6 @@ class HarnessCalculator(QWidget):
             PercLoad = self.operation_dropdown2.currentText()
             SafetyFactor = float(self.inputSF.text()) if self.inputSF.text() else 1
 
-            
-            
 
             if PercLoad == "20" :
                 CoeffLoad = 0.4566806 + 0.5809375*math.exp(-0.06637023*NumWire)
@@ -284,6 +343,19 @@ class HarnessCalculator(QWidget):
         except ValueError:
             self.result_label2.setText("Error: Invalid Input")
 
+
+    def Calculate_drop(self):
+        try:
+            # voltage = float(self.input_volt.text())
+            chosencurrent = float(self.input_curr.text())
+            distance = float(self.input_lenght.text())
+            resistivity = self.material_resistance[self.operation_dropdown4.currentText()]
+
+            drop = chosencurrent * distance * resistivity / (self.wire_sizes[self.operation_dropdown3.currentText()]/1000)
+            self.result_label3.setText(f"Voltage Drop: {drop:.2f} V")
+
+        except ValueError:
+            self.result_label2.setText("Error: Invalid Input")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
