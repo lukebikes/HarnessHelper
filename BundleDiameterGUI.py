@@ -8,7 +8,7 @@ import sys
 import math
 import packcircles as pc
 import matplotlib.pyplot as plt
-import matplotlib
+from matplotlib import colormaps
 #import re
 
 class HarnessCalculator(QWidget):
@@ -294,7 +294,7 @@ class HarnessCalculator(QWidget):
             print(radii)
             fig = plt.figure()
             ax = plt.subplot()
-            cmap = matplotlib.colormaps['coolwarm_r']
+            cmap = colormaps['coolwarm_r']
             circles = pc.pack(radii)
             for (x,y,rado) in circles:
                 patch = plt.Circle(
