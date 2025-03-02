@@ -9,7 +9,11 @@ import math
 import packcircles as pc
 import matplotlib.pyplot as plt
 from matplotlib import colormaps
-#import re
+import Wires as wire_dm
+import random
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
+plt.ion()
 
 class HarnessCalculator(QWidget):
     def __init__(self):
@@ -39,8 +43,20 @@ class HarnessCalculator(QWidget):
             "14 Gauge": 3.664,
             "12 Gauge": 4.7,     #added after
             "27500 Shielded 2 Wire 22ga": 10.080,
-            "27500 Shielded 3 Wire 22ga": 11.241
+            "27500 Shielded 3 Wire 22ga": 11.241,
         }
+
+        self.conductor_size = {
+            "24 Gauge" : 0.2050,
+            "22 Gauge" : 0.3250,
+            "20 Gauge" : 0.5190,
+            "18 Gauge" : 0.8230,
+            "16 Gauge" : 1.3100,
+            "14 Gauge" : 2.0800,
+            "12 Gauge" : 3.3100,
+        }
+
+
 
         self.wire_radius = {
             "27500 Shielded 3 Wire 22ga": 3.783/2,
@@ -83,7 +99,12 @@ class HarnessCalculator(QWidget):
             grid.addWidget(QLabel("Wires"), row, 2)
             row += 1
 
-        # Calculate Harness Button
+        # Output Field
+        self.result_label = QLabel("Harness Diameter:")
+        grid.addWidget(self.result_label, row, 0, 1, 3)
+
+        row += 1
+        # Calculate Harness Buttons
         self.calc_button = QPushButton("Calculate Harness Diameter")
         self.calc_button.clicked.connect(self.Calculate_diameter)
         grid.addWidget(self.calc_button, row, 0 , 1, 3)
@@ -91,12 +112,9 @@ class HarnessCalculator(QWidget):
         self.calc_button = QPushButton("Display Bundle Section")
         self.calc_button.clicked.connect(self.DisplayBundleSection)
         grid.addWidget(self.calc_button, row, 0 , 1, 3)
-
         row += 1
 
-        # Output Field
-        self.result_label = QLabel("Harness Diameter:")
-        grid.addWidget(self.result_label, row+1, 0, 1, 3)
+        
        
 
         # Layout Setup
@@ -135,35 +153,29 @@ class HarnessCalculator(QWidget):
 
          # Input wire Safety Factor
         row2 += 1
-
         self.inputSF = QLineEdit()
         self.inputSF.setPlaceholderText("1")
-        
-        
         regex = QRegularExpression("^(?:[0-9][0-9]{0,1}(\.\d{1,2})?|99(\.99)?)$")
         validator = QRegularExpressionValidator(regex)
         self.inputSF.setValidator(validator)
-
         grid2.addWidget(QLabel("Safety Factor"), row2 , 0)
         grid2.addWidget(self.inputSF, row2, 1)
-        
-        
        
-        
-        # Calculate2 button
-        row2 += 1
-        self.calculate_button = QPushButton("Calculate Current Limit")
-        self.calculate_button.clicked.connect(self.Calculate_Amp)
-        grid2.addWidget(self.calculate_button, row2 , 0, 1, 2)
-
         # Result display
         row2 += 1
         self.result_label2 = QLabel("Current Limit: ")
         grid2.addWidget(self.result_label2, row2 , 0, 1, 2)
         layout.addLayout(grid2)
 
+        # Calculate2 button
+        row2 += 1
+        self.calculate_button = QPushButton("Calculate Current Limit")
+        self.calculate_button.clicked.connect(self.Calculate_Amp)
+        grid2.addWidget(self.calculate_button, row2 , 0, 1, 2)
 
-         # Separator
+        
+
+        # Separator
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
@@ -209,11 +221,6 @@ class HarnessCalculator(QWidget):
         grid3.addWidget(self.operation_dropdown4, row3 , 1)
 
 
-        # Calculate button3
-        row3 += 1
-        self.calculate_button3 = QPushButton("Calculate Voltage Drop")
-        self.calculate_button3.clicked.connect(self.Calculate_drop)
-        grid3.addWidget(self.calculate_button3, row3 , 0, 1, 2)
 
         # Result display3
         row3 += 1
@@ -221,9 +228,19 @@ class HarnessCalculator(QWidget):
         grid3.addWidget(self.result_label3, row3 , 0, 1, 2)
         layout.addLayout(grid3)
 
+        # Calculate button3
+        row3 += 1
+        self.calculate_button3 = QPushButton("Calculate Voltage Drop")
+        self.calculate_button3.clicked.connect(self.Calculate_drop)
+        grid3.addWidget(self.calculate_button3, row3 , 0, 1, 2)
+
+        # # Result display3
+        # row3 += 1
+        # self.result_label3 = QLabel("Voltage Drop: ")
+        # grid3.addWidget(self.result_label3, row3 , 0, 1, 2)
+        # layout.addLayout(grid3)
 
 
-        layout.addLayout(grid3)
 
         # Set layout
         self.setWindowTitle("HarnessHelper")
@@ -251,7 +268,7 @@ class HarnessCalculator(QWidget):
 
     def Calculate_diameter(self):
         total_area = 0
-
+        print(wire_dm.TXL_diameters)
         for wire, area in self.wire_sizes.items():
             value = self.inputs[wire].text().strip()
             if value:
@@ -287,15 +304,19 @@ class HarnessCalculator(QWidget):
                 except ValueError:
                     QMessageBox.warning(self, "Input Error", f"Invalid input for {wire}. Please enter a valid number.")
                     return
+
         if totnum_wires < 3:
             QMessageBox.warning(self, "Input Error", f"Please enter at least 3 wires")
             return
         else: 
-            print(radii)
+            #print(radii)
             fig = plt.figure()
             ax = plt.subplot()
             cmap = colormaps['coolwarm_r']
             circles = pc.pack(radii)
+            circle_data = [(x, y, r) for (x, y, r) in circles]
+            circles = pc.pack(radii)
+            maxradius = 0
             for (x,y,rado) in circles:
                 patch = plt.Circle(
                     (x,y),
@@ -303,13 +324,34 @@ class HarnessCalculator(QWidget):
                     color=cmap(rado/max(radii)),
                     alpha=1
                 )
+                bundleradius = math.sqrt(x**2 + y**2) + rado
+                if bundleradius > maxradius:
+                    maxradius = bundleradius
                 ax.add_patch(patch)
+                patch2 = plt.Circle(
+                    (x,y),
+                    rado/2,
+                    color= 'brown',
+                    alpha=1
+                )
+                ax.add_patch(patch2)
+
+            
+            cx, cy, cr = self.pratt_min_enclosing_circle(circle_data)
+            patch3 = plt.Circle(
+                (cx, cy),
+                cr,
+                color='black',
+                fill = False
+            )
+            ax.add_patch(patch3)            
             fig.set_figheight(7)
             fig.set_figwidth(7)
             ax.set(xlim=(-15, 15), ylim=(-15, 15))
             plt.gca().set_aspect('equal')
             plt.axis('off')
             plt.show()
+            self.result_label.setText(f"Harness Diameter: {2*cr:.2f} mm")
         
 
    
@@ -334,10 +376,9 @@ class HarnessCalculator(QWidget):
             elif PercLoad == "100" :
                 CoeffLoad = 0.2701568 + 0.8338723*math.exp(-0.1363069*NumWire)
             
-            
+            if SafetyFactor == 0:
+                raise ValueError
             result = CoeffLoad*float(self.wire_Alimit[WireSize])/float(SafetyFactor)
-                  
-
             self.result_label2.setText(f"Current Limit: {result:.2f} A")
 
         except ValueError:
@@ -355,7 +396,38 @@ class HarnessCalculator(QWidget):
             self.result_label3.setText(f"Voltage Drop: {drop:.2f} V")
 
         except ValueError:
-            self.result_label2.setText("Error: Invalid Input")
+            self.result_label3.setText("Error: Invalid Input")
+    @staticmethod
+    def dist(x1, y1, x2, y2):
+         return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+    @staticmethod
+    def pratt_min_enclosing_circle(circles, tol=1e-6, max_iter=1000):
+        if not circles:
+            raise ValueError("No circles provided")
+    
+        # Initialize with the first circle's center and radius
+        cx, cy, cr = circles[0]
+    
+        for _ in range(max_iter):
+            violations = [(x, y, r) for x, y, r in circles if HarnessCalculator.dist(cx, cy, x, y) + r > cr]
+            if not violations:
+                break
+        
+        # Pick a random violating circle
+            x, y, r = random.choice(violations)
+            d = HarnessCalculator.dist(cx, cy, x, y)
+        
+        # Update center and radius
+            new_cr = (d + r + cr) / 2
+            ratio = (new_cr - cr) / d if d != 0 else 0
+            cx += (x - cx) * ratio
+            cy += (y - cy) * ratio
+            cr = new_cr
+    
+        return cx, cy, cr
+
+    
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
