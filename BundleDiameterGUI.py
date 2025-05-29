@@ -336,6 +336,7 @@ class HarnessCalculator(QWidget):
                 )
                 ax.add_patch(patch2)
 
+            termow=1
             
             cx, cy, cr = self.pratt_min_enclosing_circle(circle_data)
             patch3 = plt.Circle(
@@ -344,14 +345,26 @@ class HarnessCalculator(QWidget):
                 color='black',
                 fill = False
             )
-            ax.add_patch(patch3)            
+            ax.add_patch(patch3)  
+
+            patch4 = plt.Circle(
+                (cx, cy),
+                cr+termow,
+                color='black',
+                fill = False
+            )
+            ax.add_patch(patch4)  
+
+
+
+
             fig.set_figheight(7)
             fig.set_figwidth(7)
             ax.set(xlim=(-15, 15), ylim=(-15, 15))
             plt.gca().set_aspect('equal')
             plt.axis('off')
             plt.show()
-            self.result_label.setText(f"Harness Diameter: {2*cr:.2f} mm")
+            self.result_label.setText(f"Harness Diameter: {2*(cr+termow):.2f} mm")
         
 
    
@@ -402,7 +415,7 @@ class HarnessCalculator(QWidget):
          return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
     @staticmethod
-    def pratt_min_enclosing_circle(circles, tol=1e-6, max_iter=1000):
+    def pratt_min_enclosing_circle(circles, tol=1e-6, max_iter=1500):
         if not circles:
             raise ValueError("No circles provided")
     
