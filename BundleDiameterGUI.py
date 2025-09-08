@@ -75,6 +75,36 @@ class HarnessCalculator(QWidget):
 
 
 
+        # Add custom wire row
+        row = 0
+        for wire, _ in self.wire_sizes.items():
+            label = QLabel(wire)
+            input_field = QLineEdit()
+            input_field.setValidator(QIntValidator(0, 9999))  # Only allow positive integers
+            self.inputs[wire] = input_field  # Store input field reference
+            grid.addWidget(label, row, 0)
+            grid.addWidget(input_field, row, 1)
+            grid.addWidget(QLabel("Wires"), row, 2)
+            row += 1
+
+        # Custom wire row
+        self.custom_area_input = QLineEdit()
+        self.custom_area_input.setValidator(QDoubleValidator(0.0, 999.99, 3))
+        self.custom_count_input = QLineEdit()
+        self.custom_count_input.setValidator(QIntValidator(0, 9999))
+        grid.addWidget(QLabel("Custom (mm²)"), row, 0)
+        grid.addWidget(self.custom_count_input, row, 1)
+        grid.addWidget(QLabel("Wires"), row, 2)
+        grid.addWidget(self.custom_area_input, row, 3)
+        grid.addWidget(QLabel("mm² each"), row, 4)
+        row += 1
+
+        # Output Field
+        self.result_label = QLabel("Harness Diameter:")
+        grid.addWidget(self.result_label, row, 0, 1, 3)
+
+
+
 
         self.conductor_size = {
             "24 Gauge" : 0.2050,
@@ -128,7 +158,21 @@ class HarnessCalculator(QWidget):
         #     grid.addWidget(input_field, row, 1)
         #     grid.addWidget(QLabel("Wires"), row, 2)
         #     row += 1
+        # # Create labels and input fields dynamically
+        # row = 0
+        # for wire, _ in self.wire_sizes.items():
+        #     label = QLabel(wire)
+        #     input_field = QLineEdit()
+        #     input_field.setValidator(QIntValidator(0, 9999))  # Only allow positive integers
+        #     self.inputs[wire] = input_field  # Store input field reference
+        #     grid.addWidget(label, row, 0)
+        #     grid.addWidget(input_field, row, 1)
+        #     grid.addWidget(QLabel("Wires"), row, 2)
+        #     row += 1
 
+        # # Output Field
+        # self.result_label = QLabel("Harness Diameter:")
+        # grid.addWidget(self.result_label, row, 0, 1, 3)
         # # Output Field
         # self.result_label = QLabel("Harness Diameter:")
         # grid.addWidget(self.result_label, row, 0, 1, 3)
@@ -324,6 +368,20 @@ class HarnessCalculator(QWidget):
             except ValueError:
                 QMessageBox.warning(self, "Input Error", "Invalid input for custom wire. Please enter valid numbers.")
                 return
+                                    
+        # Handle custom wire
+        custom_count = self.custom_count_input.text().strip()
+        custom_area = self.custom_area_input.text().strip()
+        if custom_count and custom_area:
+            try:
+                num_wires = int(custom_count)
+                area = float(custom_area)
+                if num_wires < 0 or area <= 0:
+                    raise ValueError
+                total_area += num_wires * area
+            except ValueError:
+                QMessageBox.warning(self, "Input Error", "Invalid input for custom wire. Please enter valid numbers.")
+                return
 
         # Final diameter calculation
         if total_area > 0:
@@ -348,6 +406,30 @@ class HarnessCalculator(QWidget):
                 except ValueError:
                     QMessageBox.warning(self, "Input Error", f"Invalid input for {wire}. Please enter a valid number.")
                     return
+        # --- Add custom wires to bundle display ---
+        custom_count = self.custom_count_input.text().strip()
+        custom_area = self.custom_area_input.text().strip()
+        if custom_count and custom_area:
+            try:
+                num_wires = int(custom_count)
+                area = float(custom_area)
+                if num_wires < 0 or area <= 0:
+                    raise ValueError
+                # Area = pi * r^2 => r = sqrt(area / pi)
+                custom_radius = math.sqrt(area / math.pi)
+                totnum_wires += num_wires
+                for _ in range(num_wires):
+                    radii.append(custom_radius)
+            except ValueError:
+                QMessageBox.warning(self, "Input Error", "Invalid input for custom wire. Please enter valid numbers.")
+                return
+        # --- end custom wires ---        
+        
+
+
+
+
+
         # --- Add custom wires to bundle display ---
         custom_count = self.custom_count_input.text().strip()
         custom_area = self.custom_area_input.text().strip()
@@ -468,12 +550,13 @@ class HarnessCalculator(QWidget):
 
     def Calculate_drop(self):
         try:
-            # voltage = float(self.input_volt.text())
             chosencurrent = float(self.input_curr.text())
             distance = float(self.input_lenght.text())
             resistivity = self.material_resistance[self.operation_dropdown4.currentText()]
+            area_mm2 = self.wire_sizes[self.operation_dropdown3.currentText()]
+            area_m2 = area_mm2 / 10000  # Convert mm² to m²
 
-            drop = chosencurrent * distance * resistivity / (self.wire_sizes[self.operation_dropdown3.currentText()]/1000)
+            drop = chosencurrent * distance * resistivity / area_m2
             self.result_label3.setText(f"Voltage Drop: {drop:.2f} V")
 
         except ValueError:
